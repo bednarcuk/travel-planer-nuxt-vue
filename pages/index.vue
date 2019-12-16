@@ -4,20 +4,18 @@
       <logo />
       <b-row>
         <b-col lg="12">
-          <b-form v-on:submit.prevent="onSubmit" v-on:reset.prevent="onCancel">
+          <b-form>
             <b-card>
               <div slot="header">
-                <strong>Trip Planner</strong>
+                <b-link to="/">
+                  <strong>Home</strong>
+                </b-link>
               </div>
               <b-row class="form-group">
                 <b-col sm="12">
-                  <b-form-group
-                  >
+                  <b-form-group>
                     <b-input-group>
-                      <b-form-select
-                        v-model="citySelected"
-                        :options="citiesListOptions"
-                      >
+                      <b-form-select v-model="citySelected" :options="citiesListOptions">
                         <template v-slot:first>
                           <option :value="null" disabled>-- Please select a City --</option>
                         </template>
@@ -25,21 +23,19 @@
                     </b-input-group>
                   </b-form-group>
                 </b-col>
-                <b-col sm="12" v-if="cityDetails">
-                  <b-form-group
-                  >
+                <b-col sm="12" v-if="cityInfo">
+                  <b-form-group>
                   <b-jumbotron>
                     <template slot="lead">
-                      This article is about {{city}} the Canadian city -- Wikipedia
+                      This article is about {{city}} the Canadian city
                     </template>
                     <hr class="my-4">
-                    <div v-html="cityDetails"> </div>
+                    <div v-html="cityInfo"> </div>
                   </b-jumbotron>
                   </b-form-group>
                 </b-col>
                 <b-col sm="12" v-else>
-                  <b-form-group
-                  >
+                  <b-form-group>
                   <b-jumbotron>
                     <template slot="lead">
                       <div v-html="welcomeGreetingText"> </div>
@@ -49,24 +45,28 @@
                   </b-jumbotron>
                   </b-form-group>
                 </b-col>
-                <b-col sm="12" v-if="cityWeather">
-                  <b-form-group
-                  >
-                    <div>
-                      <b-tabs content-class="mt-2">
-                          <b-tab v-for="period in cityWeather.periods" :key="period.timestamp" :title="formatDate(period.dateTimeISO)">
-                          <b-list-group>
-                            <b-list-group-item>Temperature: {{period.avgTempC}} <span>°C</span></b-list-group-item>
-                            <b-list-group-item>Feelslike: {{period.feelslikeC}} <span>°C</span></b-list-group-item>
-                            <b-list-group-item>Wind: {{period.windSpeedKPH}} <span>{{period.windDir}} km/h</span></b-list-group-item>
-                            <b-list-group-item>Pressure: {{period.pressureMB}} <span>kPa</span></b-list-group-item>
-                            <b-list-group-item>Description: {{period.weather}}</b-list-group-item>
-                            <b-list-group-item disabled>Date: {{period.dateTimeISO}}</b-list-group-item>
-                          </b-list-group>
-                        </b-tab>
-                      </b-tabs>
+                <b-col sm="12" v-if="cityForecasts">
+                  <b-card>
+                    <div slot="header">
+                      {{city}} 7 day Weather Forecasts
                     </div>
-                  </b-form-group>
+                    <b-form-group>
+                      <div>
+                        <b-tabs content-class="mt-2">
+                          <b-tab v-for="period in cityForecasts.periods" :key="period.timestamp" :title="formatDate(period.dateTimeISO)">
+                            <b-list-group>
+                              <b-list-group-item>Temperature: {{period.avgTempC}} <span>°C</span></b-list-group-item>
+                              <b-list-group-item>Feelslike: {{period.feelslikeC}} <span>°C</span></b-list-group-item>
+                              <b-list-group-item>Wind: {{period.windSpeedKPH}} <span>{{period.windDir}} km/h</span></b-list-group-item>
+                              <b-list-group-item>Pressure: {{period.pressureMB}} <span>kPa</span></b-list-group-item>
+                              <b-list-group-item>Description: {{period.weather}}</b-list-group-item>
+                              <b-list-group-item disabled>Date: {{period.dateTimeISO}}</b-list-group-item>
+                            </b-list-group>
+                          </b-tab>
+                        </b-tabs>
+                      </div>
+                    </b-form-group>
+                  </b-card>
                 </b-col>
               </b-row>
             </b-card>
@@ -78,9 +78,7 @@
 </template>
 <script>
 import Logo from '~/components/Logo.vue'
-import VueGeolocation from 'vue-browser-geolocation'
-import Vue from 'vue'
-Vue.use(VueGeolocation)
+import { mapState } from 'vuex'
 export default {
   name: 'CityInformation',
   head() {
@@ -93,9 +91,6 @@ export default {
   },
   data() {
     return {
-      city: null,
-      cityDetails: null,
-      cityWeather: null,
       citySelected: null,
       citiesListOptions: [
         {value: 'Calgary', text: 'Calgary'},
@@ -105,41 +100,22 @@ export default {
         {value: 'Grande Prairie', text: 'Grande Prairie'}
       ],
       welcomeText: 'Please select a city to get valued informations!',
-      welcomeGreetingText: 'Welcome to Trip Planner!'
+      welcomeGreetingText: 'Welcome to Trip Planner'
     }
+  },
+  computed: {
+    ...mapState({
+      city: state => state.city.name,
+      cityInfo: state => state.city.info,
+      cityForecasts: state => state.city.forecasts
+    })
   },
   watch: {
     citySelected(selectedObject) {
-      this.fetchCityDetails(selectedObject)
-    },
+      this.$store.dispatch('city/getDetails', selectedObject)
+    }
   },
   methods: {
-    fetchCityDetails(city){
-      // wikipedia
-      this.city = city
-      const wikiApiEndpoint = 'https://en.wikipedia.org/w/api.php'
-      const wikiApiparams = `action=query&list=search&format=json&suggest=true&namespace=0&srlimit=1&origin=*&srsearch=${city}`
-      this.$axios.$post(
-        `${wikiApiEndpoint}?${wikiApiparams}`
-      ).then(response=>{
-        if(response.query.search[0].snippet){
-          this.cityDetails = response.query.search[0].snippet + ' ...'
-        }
-      })
-      // weather aerisweather
-      const weatherApiEndpoint = `https://api.aerisapi.com/forecasts/${city},ca`
-      const weatherClientSecret = 'client_secret=9CQ60bC5gIkYUymHD84uCg4M6eepex4CWGT3nXZa'
-      const weatherClientId = 'client_id=3XbbZ657qEaCmrWaf7OZ0'
-      this.$axios.$post(
-        `${weatherApiEndpoint}?${weatherClientSecret}&${weatherClientId}`
-      ).then(response=>{
-        if(response.success == true){
-          this.cityWeather = response.response[0]
-        } else {
-            alert('An error occurred: ' + response.error.description)
-        }
-      })
-    },
     formatDate(iDate) {
       // ISO Date to date
       var date = new Date(iDate)

@@ -1,4 +1,4 @@
-
+require('dotenv').config()
 module.exports = {
   mode: 'spa',
   /*
@@ -64,5 +64,9 @@ module.exports = {
     */
     extend (config, ctx) {
     }
+  },
+  env: {
+    API_AERISAPI_CLIENT_SECRET: '9CQ60bC5gIkYUymHD84uCg4M6eepex4CWGT3nXZa',
+    API_AERISAPI_CLIENT_ID: '3XbbZ657qEaCmrWaf7OZ0'
   }
 }

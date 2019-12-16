@@ -40,7 +40,21 @@ module.exports = {
   modules: [
     // Doc: https://bootstrap-vue.js.org
     'bootstrap-vue/nuxt',
+    '@nuxtjs/axios',
+    '@bazzite/nuxt-netlify'
   ],
+  netlify: {
+    redirects: [
+      {
+        from: '/*',
+        to: '/index.html',
+        status: 200
+      }
+    ]
+  },
+  axios: {
+    proxyHeaders: false
+  },
   /*
   ** Build configuration
   */
